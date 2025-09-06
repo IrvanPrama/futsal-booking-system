@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\ReservationResource\Pages;
 use App\Filament\Resources\ReservationResource\RelationManagers;
 use App\Models\Reservation;
+use App\Models\LapanganPrice;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -15,11 +16,14 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TextInput;
-use App\Models\LapanganPrice;
 use Carbon\Carbon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BadgeColumn;
-
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Actions\BulkActionGroup;
+use Filament\Tables\Actions\ExportBulkAction;
+use Filament\Tables\Exports\ExcelExport;
+use App\Filament\Exports\ReservationsExport;
 
 class ReservationResource extends Resource
 {
@@ -228,11 +232,11 @@ class ReservationResource extends Resource
             ->actions([
                 Tables\Actions\EditAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ]);
+           ->bulkActions([
+            Tables\Actions\DeleteBulkAction::make(),
+            ExportBulkAction::make()
+                    ->exporter(ReservationsExport::class), // pakai exporter yg kita buat
+                ]);
     }
 
     public static function mutateFormDataBeforeCreate(array $data): array
