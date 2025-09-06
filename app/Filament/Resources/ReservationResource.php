@@ -234,7 +234,7 @@ class ReservationResource extends Resource
             ])
            ->bulkActions([
             Tables\Actions\DeleteBulkAction::make(),
-            ExportBulkAction::make()
+                ExportBulkAction::make()
                     ->exporter(ReservationsExport::class), // pakai exporter yg kita buat
                 ]);
     }
