@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('role')->default('1'); // 0=admin,  1=member, 2=non-member
             $table->string('name');
+            $table->string('wa');
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
