@@ -16,8 +16,9 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 class UserResource extends Resource
 {
     protected static ?string $model = User::class;
-
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    //install: composer require "blade-ui-kit/blade-icons"
+    //install: php artisan vendor:publish --tag=blade-icons
+    protected static ?string $navigationIcon = 'heroicon-s-user-group';
     protected static ?string $navigationLabel = 'Pengguna';
     protected static ?int $navigationSort = 1;
     protected static ?string $navigationGroup = 'Manajemen';

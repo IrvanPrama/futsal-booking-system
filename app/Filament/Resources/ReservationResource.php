@@ -29,8 +29,8 @@ use Illuminate\Support\Facades\Redirect;
 class ReservationResource extends Resource
 {
     protected static ?string $model = Reservation::class;
-
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    // Note: Install "hugeicons/hugeicons" via composer to use this icon
+    protected static ?string $navigationIcon = 'hugeicons-note-add';
     // protected static ?string $navigationGroup = 'Manajemen Reservasi';
     protected static ?int $navigationSort = 2;
     public static function shouldRegisterNavigation(): bool
