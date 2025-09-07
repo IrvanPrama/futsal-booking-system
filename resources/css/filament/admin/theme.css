@@ -1,0 +1,14 @@
+/* Jangan lupa: kita sudah import filament default di app.css, jadi di sini hanya override */
+.fi-topbar {
+    background-color: #1e293b !important;
+    color: #fff !important;
+}
+
+.fi-sidebar {
+    background-color: #0f172a !important;
+    color: #f8fafc !important;
+}
+
+.fi-main {
+    background-color: #fef3c7 !important;
+}
