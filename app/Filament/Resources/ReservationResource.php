@@ -24,12 +24,29 @@ use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Actions\ExportBulkAction;
 use Filament\Tables\Exports\ExcelExport;
 use App\Filament\Exports\ReservationsExport;
+use Illuminate\Support\Facades\Redirect;
 
 class ReservationResource extends Resource
 {
     protected static ?string $model = Reservation::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    // protected static ?string $navigationGroup = 'Manajemen Reservasi';
+    protected static ?int $navigationSort = 2;
+    public static function shouldRegisterNavigation(): bool
+    {
+        return auth()->check() && auth()->user()->role === 0;
+    }
+
+    public static function canAccess(): bool
+    {
+        if (! auth()->check() || auth()->user()->role !== 0) {
+            // Redirect ke dashboard
+            Redirect::to('/admin');
+        }
+
+        return true;
+    }
 
     public static function form(Form $form): Form
     {
@@ -172,8 +189,8 @@ class ReservationResource extends Resource
                         'cancel'  => 'Cancel',
                     ])
                     ->default('pending') // default untuk halaman create
-                    ->disabled(fn () => ! auth()->check() || auth()->user()->role !== '0') // disabled kecuali admin (role=0)
-                    ->required(fn () => auth()->check() && auth()->user()->role === '0') // wajib hanya kalau admin
+                    ->disabled(fn () => ! auth()->check() || auth()->user()->role !== 0) // disabled kecuali admin (role=0)
+                    ->required(fn () => auth()->check() && auth()->user()->role === 0) // wajib hanya kalau admin
                     ->dehydrated(true) // pastikan tetap disertakan saat submit meskipun disabled
                     ->reactive()
                     ->helperText('Status akan berubah ketika pembayaran anda sudah terverifikasi.'),

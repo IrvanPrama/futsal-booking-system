@@ -12,12 +12,31 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\Redirect;
 
 class LapanganPriceResource extends Resource
 {
     protected static ?string $model = LapanganPrice::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationLabel = 'Lapangan';
+    protected static ?string $navigationGroup = 'Manajemen';
+    protected static ?int $navigationSort = 3;
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return auth()->check() && auth()->user()->role === 0;
+    }
+
+    public static function canAccess(): bool
+    {
+        if (! auth()->check() || auth()->user()->role !== 0) {
+            // Redirect ke dashboard
+            Redirect::to('/admin');
+        }
+
+        return true;
+    }
 
     public static function form(Form $form): Form
     {
