@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
 
 class Reservation extends Model
 {
@@ -19,9 +20,23 @@ class Reservation extends Model
         'user_id',
         'status',
         'bukti_transfer',
+        'catatan',
     ];
 
-    
+    public function deadlinePayment()
+    {
+        return Carbon::parse($this->tanggal_reservasi . ' ' . $this->jam_mulai)
+            ->subHours(12);
+    }
+
+    public function isExpired()
+    {
+        return now()->greaterThanOrEqualTo($this->deadlinePayment());
+    }
+
+    //setelah add code di atas, buat command di terminal: php artisan make:command CancelExpiredReservations
+    //lalu isi file Console\Commands\CancelExpiredReservations.php
+    //lalu buat schedule di app\Console\Kernel.php
 
     public function lapangan()
     {

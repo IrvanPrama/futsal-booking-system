@@ -103,36 +103,48 @@ class ReservationResource extends Resource
                     }),
                 
                     Forms\Components\Placeholder::make('total_harga_preview')
-    ->label('Total Biaya')
-    ->content(function ($get) {
-        if (! $get('lapangan_id') || ! $get('durasi_jam') || ! $get('jam_mulai') || ! $get('tanggal_reservasi')) {
-            return 'Isi data reservasi dulu';
-        }
+                        ->label('Total Biaya')
+                        ->content(function ($get) {
+                            if (! $get('lapangan_id') || ! $get('durasi_jam') || ! $get('jam_mulai') || ! $get('tanggal_reservasi')) {
+                                return 'Isi data reservasi dulu';
+                            }
 
-        $durasi = (int) $get('durasi_jam');
-        $jamMulai = Carbon::parse($get('jam_mulai'));
-        $role = (int) (auth()->user()->role ?? 2);
+                            $durasi = (int) $get('durasi_jam');
+                            $jamMulai = Carbon::parse($get('jam_mulai'));
+                            $role = (int) (auth()->user()->role ?? 2);
 
-        $dayOfWeek = Carbon::parse($get('tanggal_reservasi'))->dayOfWeek;
-        $dayType = ($dayOfWeek >= 1 && $dayOfWeek <= 5) ? 'weekday' : 'weekend';
+                            $dayOfWeek = Carbon::parse($get('tanggal_reservasi'))->dayOfWeek;
+                            $dayType = ($dayOfWeek >= 1 && $dayOfWeek <= 5) ? 'weekday' : 'weekend';
 
-        $harga = \App\Models\LapanganPrice::where('lapangan_id', $get('lapangan_id'))
-            ->where('day_type', $dayType)
-            ->where('role', $role)
-            ->where('start_time', '<=', $jamMulai->format('H:i:s'))
-            ->where('end_time', '>', $jamMulai->format('H:i:s'))
-            ->first();
+                            $harga = \App\Models\LapanganPrice::where('lapangan_id', $get('lapangan_id'))
+                                ->where('day_type', $dayType)
+                                ->where('role', $role)
+                                ->where('start_time', '<=', $jamMulai->format('H:i:s'))
+                                ->where('end_time', '>', $jamMulai->format('H:i:s'))
+                                ->first();
 
-        $hargaPerJam = $harga?->price_per_hour ?? 0;
-        return 'Rp ' . number_format($hargaPerJam * $durasi, 0, ',', '.');
-    })
-    ->reactive(),
+                            $hargaPerJam = $harga?->price_per_hour ?? 0;
+                            return 'Rp ' . number_format($hargaPerJam * $durasi, 0, ',', '.');
+                        })
+                        ->reactive(),
 
 
                 Forms\Components\Textarea::make('catatan')
                     ->label('Catatan')
                     ->rows(2)
                     ->nullable(),
+                Forms\Components\Select::make('status')
+                    ->label('Status')
+                    ->options([
+                        'pending' => 'Pending',
+                        'approved' => 'Approved',
+                        'cancelled' => 'Cancelled',
+                    ])
+                    ->default('pending')
+                    ->required(),   
+                Forms\Components\FileUpload::make('bukti_transfer')
+                    ->label('Bukti Transfer')
+                    ->image()
             ]);
     }
 
@@ -140,6 +152,7 @@ class ReservationResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('nama_penyewa')->label('Penyewa')->searchable(),
                 Tables\Columns\TextColumn::make('tanggal_reservasi')->label('Tanggal')->date(),
                 Tables\Columns\TextColumn::make('lapangan.nama')->label('Lapangan'),
                 Tables\Columns\TextColumn::make('jam_mulai')->label('Mulai')->time(),
@@ -153,6 +166,8 @@ class ReservationResource extends Resource
                         'success' => 'approved',
                         'danger' => 'cancelled',
                     ]),
+                Tables\Columns\TextColumn::make('bukti_transfer')->label('Bukti Transfer')->url(fn ($record) => $record->bukti_transfer ? asset('storage/' . $record->bukti_transfer) : null)->openUrlInNewTab()->icon('heroicon-o-link')->toggleable(),
+               
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
