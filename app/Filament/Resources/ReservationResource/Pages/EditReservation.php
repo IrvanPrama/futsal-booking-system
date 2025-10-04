@@ -3,14 +3,30 @@
 namespace App\Filament\Resources\ReservationResource\Pages;
 
 use App\Filament\Resources\ReservationResource;
-use Filament\Actions;
-use Filament\Resources\Pages\EditRecord;
-use Carbon\Carbon;
 use App\Models\LapanganPrice;
+use Carbon\Carbon;
+use Filament\Actions;
+use Filament\Notifications\Notification;
+use Filament\Resources\Pages\EditRecord;
 
 class EditReservation extends EditRecord
 {
     protected static string $resource = ReservationResource::class;
+
+    public function mount($record): void
+    {
+        // Jika bukan role 0, langsung redirect ke /admin
+        if (auth()->user()->role != 0) {
+            Notification::make()
+            ->title('Anda tidak memiliki akses ke halaman Hasil.')
+            ->danger()
+            ->send();
+
+            $this->redirect('/admin');
+        }
+
+        parent::mount($record);
+    }
 
     protected function getHeaderActions(): array
     {
@@ -51,7 +67,4 @@ class EditReservation extends EditRecord
 
         return $data;
     }
-
-    
-
 }

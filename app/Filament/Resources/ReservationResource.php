@@ -205,8 +205,12 @@ class ReservationResource extends Resource
             ])
 
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                // Tables\Actions\EditAction::make(),
+                // Tables\Actions\DeleteAction::make(),
+                Tables\Actions\EditAction::make()
+                   ->visible(fn () => auth()->user()->role == 0), // hanya role 0
+                Tables\Actions\DeleteAction::make()
+                    ->visible(fn () => auth()->user()->role == 0),
             ]);
     }
 
