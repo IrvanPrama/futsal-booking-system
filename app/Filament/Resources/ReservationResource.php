@@ -1,16 +1,23 @@
 <?php
 
+// install: composer require maatwebsite/excel
+// php artisan make:export ReservationsExport --model=Reservation
+
 namespace App\Filament\Resources;
 
+use App\Exports\ReservationsExport;
 use App\Filament\Resources\ReservationResource\Pages;
-use App\Models\Reservation;
 use App\Models\Lapangan;
+use App\Models\Reservation;
+use Carbon\Carbon;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Actions\BulkAction;
 use Filament\Tables\Table;
-use Carbon\Carbon;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ReservationResource extends Resource
 {
@@ -27,13 +34,14 @@ class ReservationResource extends Resource
                 Forms\Components\DatePicker::make('tanggal_reservasi')
                     ->label('Tanggal Reservasi')
                     ->required()
+                    ->minDate(today()) // minimal hari ini
                     ->native(false)
                     ->reactive(),
 
-                 Forms\Components\TextInput::make('nama_penyewa')
-                    ->label('Penyewa')
-                    ->required()
-                    ->required(),
+                Forms\Components\TextInput::make('nama_penyewa')
+                   ->label('Penyewa')
+                   ->required()
+                   ->required(),
 
                 Forms\Components\Select::make('lapangan_id')
                     ->label('Lapangan')
@@ -69,20 +77,20 @@ class ReservationResource extends Resource
                             ->get();
 
                         $options = [];
-                        for ($jam = $jamBuka; $jam <= $jamTutup - $durasi; $jam++) {
+                        for ($jam = $jamBuka; $jam <= $jamTutup - $durasi; ++$jam) {
                             $jamMulai = sprintf('%02d:00:00', $jam);
                             $jamSelesai = sprintf('%02d:00:00', $jam + $durasi);
 
                             // cek bentrok dengan reservasi lain
                             $bentrok = $reserved->contains(function ($r) use ($jamMulai, $jamSelesai) {
                                 return !(
-                                    $jamSelesai <= $r->jam_mulai ||
-                                    $jamMulai >= $r->jam_selesai
+                                    $jamSelesai <= $r->jam_mulai
+                                    || $jamMulai >= $r->jam_selesai
                                 );
                             });
 
                             if (!$bentrok) {
-                                $options[$jamMulai] = $jamMulai . ' - ' . $jamSelesai;
+                                $options[$jamMulai] = $jamMulai.' - '.$jamSelesai;
                             }
                         }
 
@@ -99,35 +107,36 @@ class ReservationResource extends Resource
                                 ->addHours((int) $get('durasi_jam'))
                                 ->format('H:i');
                         }
+
                         return '-';
                     }),
-                
-                    Forms\Components\Placeholder::make('total_harga_preview')
-                        ->label('Total Biaya')
-                        ->content(function ($get) {
-                            if (! $get('lapangan_id') || ! $get('durasi_jam') || ! $get('jam_mulai') || ! $get('tanggal_reservasi')) {
-                                return 'Isi data reservasi dulu';
-                            }
 
-                            $durasi = (int) $get('durasi_jam');
-                            $jamMulai = Carbon::parse($get('jam_mulai'));
-                            $role = (int) (auth()->user()->role ?? 2);
+                Forms\Components\Placeholder::make('total_harga_preview')
+                    ->label('Total Biaya')
+                    ->content(function ($get) {
+                        if (!$get('lapangan_id') || !$get('durasi_jam') || !$get('jam_mulai') || !$get('tanggal_reservasi')) {
+                            return 'Isi data reservasi dulu';
+                        }
 
-                            $dayOfWeek = Carbon::parse($get('tanggal_reservasi'))->dayOfWeek;
-                            $dayType = ($dayOfWeek >= 1 && $dayOfWeek <= 5) ? 'weekday' : 'weekend';
+                        $durasi = (int) $get('durasi_jam');
+                        $jamMulai = Carbon::parse($get('jam_mulai'));
+                        $role = (int) (auth()->user()->role ?? 2);
 
-                            $harga = \App\Models\LapanganPrice::where('lapangan_id', $get('lapangan_id'))
-                                ->where('day_type', $dayType)
-                                ->where('role', $role)
-                                ->where('start_time', '<=', $jamMulai->format('H:i:s'))
-                                ->where('end_time', '>', $jamMulai->format('H:i:s'))
-                                ->first();
+                        $dayOfWeek = Carbon::parse($get('tanggal_reservasi'))->dayOfWeek;
+                        $dayType = ($dayOfWeek >= 1 && $dayOfWeek <= 5) ? 'weekday' : 'weekend';
 
-                            $hargaPerJam = $harga?->price_per_hour ?? 0;
-                            return 'Rp ' . number_format($hargaPerJam * $durasi, 0, ',', '.');
-                        })
-                        ->reactive(),
+                        $harga = \App\Models\LapanganPrice::where('lapangan_id', $get('lapangan_id'))
+                            ->where('day_type', $dayType)
+                            ->where('role', $role)
+                            ->where('start_time', '<=', $jamMulai->format('H:i:s'))
+                            ->where('end_time', '>', $jamMulai->format('H:i:s'))
+                            ->first();
 
+                        $hargaPerJam = $harga?->price_per_hour ?? 0;
+
+                        return 'Rp '.number_format($hargaPerJam * $durasi, 0, ',', '.');
+                    })
+                    ->reactive(),
 
                 Forms\Components\Textarea::make('catatan')
                     ->label('Catatan')
@@ -141,10 +150,10 @@ class ReservationResource extends Resource
                         'cancelled' => 'Cancelled',
                     ])
                     ->default('pending')
-                    ->required(),   
+                    ->required(),
                 Forms\Components\FileUpload::make('bukti_transfer')
                     ->label('Bukti Transfer')
-                    ->image()
+                    ->image(),
             ]);
     }
 
@@ -166,9 +175,35 @@ class ReservationResource extends Resource
                         'success' => 'approved',
                         'danger' => 'cancelled',
                     ]),
-                Tables\Columns\TextColumn::make('bukti_transfer')->label('Bukti Transfer')->url(fn ($record) => $record->bukti_transfer ? asset('storage/' . $record->bukti_transfer) : null)->openUrlInNewTab()->icon('heroicon-o-link')->toggleable(),
-               
+                Tables\Columns\TextColumn::make('bukti_transfer')->label('Bukti Transfer')->url(fn ($record) => $record->bukti_transfer ? asset('storage/'.$record->bukti_transfer) : null)->openUrlInNewTab()->icon('heroicon-o-link')->toggleable(),
             ])
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+
+                    BulkAction::make('export_and_delete_all')
+                        ->label('Export & Hapus Semua')
+                        ->icon('heroicon-o-trash')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->action(function () {
+                            // 1. Export data ke file Excel
+                            $fileName = 'reservations_'.now()->format('Y_m_d_H_i_s').'.xlsx';
+                            Excel::store(new ReservationsExport(), $fileName, 'public');
+
+                            // 2. Hapus semua data
+                            Reservation::truncate();
+
+                            // 3. Notifikasi dengan link download
+                            Notification::make()
+                                ->title('Data berhasil diexport & dihapus!')
+                                ->body("Download file: <a href='".asset('storage/'.$fileName)."' target='_blank'>Klik di sini</a>")
+                                ->success()
+                                ->send();
+                        }),
+                ]),
+            ])
+
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),

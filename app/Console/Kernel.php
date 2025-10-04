@@ -12,10 +12,16 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // jalanin tiap menit untuk cek reservasi expired
-        $schedule->command('reservations:cancel-expired')->everyMinute();
-    }
+        file_put_contents(
+            storage_path('logs/schedule_debug.log'),
+            'Scheduler loaded at '.now().PHP_EOL,
+            FILE_APPEND
+        );
 
+        $schedule->command('reservations:cancel-expired')
+            ->everyMinute()
+            ->appendOutputTo(storage_path('logs/scheduler.log'));
+    }
 
     /**
      * Register the commands for the application.

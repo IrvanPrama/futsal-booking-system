@@ -1,9 +1,10 @@
 <?php
-// app/Console/Commands/CancelExpiredReservations.php
+
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\Reservation;
+use Carbon\Carbon;
+use Illuminate\Console\Command;
 
 class CancelExpiredReservations extends Command
 {
@@ -12,18 +13,21 @@ class CancelExpiredReservations extends Command
 
     public function handle()
     {
+        $now = Carbon::now('Asia/Makassar');
+
+        // Gabungkan tanggal_reservasi + jam_mulai lalu cek <= now + 12 jam
         $count = Reservation::where('status', 'pending')
             ->whereNull('bukti_transfer')
-            ->get()
-            ->filter(function ($reservation) {
-                return $reservation->isExpired();
-            })
-            ->each(function ($reservation) {
-                $reservation->update(['status' => 'cancelled']);
-            })
-            ->count();
+            ->whereRaw("STR_TO_DATE(CONCAT(tanggal_reservasi, ' ', jam_mulai), '%Y-%m-%d %H:%i:%s') <= ?", [
+                $now->copy()->addHours(12)->toDateTimeString(),
+            ])
+            ->update([
+                'status' => 'cancelled',
+                'canceled_at' => $now,
+            ]);
 
         $this->info("Cancelled {$count} expired reservations.");
+
         return 0;
     }
 }
