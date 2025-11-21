@@ -12,6 +12,7 @@ return new class extends Migration {
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
+            $table->string('user_id')->unique();
             $table->integer('role')->default(2); // 0=admin,  1=member, 2=non-member
             $table->string('name');
             $table->string('wa')->nullable();

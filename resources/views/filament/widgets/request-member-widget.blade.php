@@ -6,7 +6,7 @@
             <x-filament::button
                 color="success"
                 tag="a"
-                href="https://wa.me/6285117535972?text=Halo%20Admin,%20saya%20ingin%20request%20membership."
+                wire:click="goToCreateMember"
                 target="_blank"
             >
                 Kirim WhatsApp
@@ -14,3 +14,5 @@
         </div>
     </x-filament::card>
 </x-filament::widget>
+<!-- href="https://wa.me/6285117535972?text=Halo%20Admin,%20saya%20ingin%20request%20membership." -->
+

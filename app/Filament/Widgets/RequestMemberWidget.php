@@ -2,8 +2,9 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Resources\MemberResource;
 use Filament\Widgets\Widget;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Auth; // penting!
 
 class RequestMemberWidget extends Widget
 {
@@ -13,17 +14,12 @@ class RequestMemberWidget extends Widget
     {
         $user = Auth::user();
 
-        // Jika user tidak login → sembunyikan
-        if (!$user) {
-            return false;
-        }
+        // hanya role 2 yang bisa melihat tombol
+        return $user && $user->role == 2;
+    }
 
-        // Sembunyikan jika role = 0
-        if ($user->role == 2) {
-            return true;
-        }
-
-        // Selain itu tampilkan
-        return true;
+    public function goToCreateMember()
+    {
+        return redirect(MemberResource::getUrl('create'));
     }
 }
