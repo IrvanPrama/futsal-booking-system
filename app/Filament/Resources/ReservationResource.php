@@ -126,7 +126,7 @@ class ReservationResource extends Resource
                         return '-';
                     }),
 
-                Forms\Components\Placeholder::make('total_harga_preview')
+                Forms\Components\Placeholder::make('total_harga')
                     ->label('Total Biaya')
                     ->content(function ($get) {
                         if (!$get('lapangan_id') || !$get('durasi_jam') || !$get('jam_mulai') || !$get('tanggal_reservasi')) {
@@ -151,6 +151,7 @@ class ReservationResource extends Resource
 
                         return 'Rp '.number_format($hargaPerJam * $durasi, 0, ',', '.');
                     })
+
                     ->reactive(),
 
                 Forms\Components\Textarea::make('catatan')
@@ -182,7 +183,19 @@ class ReservationResource extends Resource
                 Tables\Columns\TextColumn::make('jam_mulai')->label('Mulai')->time(),
                 Tables\Columns\TextColumn::make('jam_selesai')->label('Selesai')->time(),
                 Tables\Columns\TextColumn::make('durasi_jam')->label('Durasi (jam)'),
-                Tables\Columns\TextColumn::make('total_harga')->label('Total Harga')->money('IDR'),
+                Tables\Columns\TextColumn::make('total_harga')
+                ->label('Total Harga')
+                ->money('IDR')
+                ->summarize(
+                    auth()->user()->role == 0
+                        ? [
+                            Tables\Columns\Summarizers\Sum::make()
+                                ->label('Total Pemasukan')
+                                ->money('IDR'),
+                        ]
+                        : []
+                ),
+
                 Tables\Columns\BadgeColumn::make('status')
                     ->label('Status')
                     ->colors([
