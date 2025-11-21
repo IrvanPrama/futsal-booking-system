@@ -24,16 +24,16 @@ class Reservation extends Model
         'canceled_at',
     ];
 
-    public function deadlinePayment()
-    {
-        return Carbon::parse($this->tanggal_reservasi.' '.$this->jam_mulai)
-            ->subHours(12);
-    }
+    // public function deadlinePayment()
+    // {
+    //     return Carbon::parse($this->tanggal_reservasi.' '.$this->jam_mulai)
+    //         ->subHours(12);
+    // }
 
-    public function isExpired()
-    {
-        return Carbon::now('Asia/Makassar')->greaterThanOrEqualTo($this->deadlinePayment());
-    }
+    // public function isExpired()
+    // {
+    //     return Carbon::now('Asia/Makassar')->greaterThanOrEqualTo($this->deadlinePayment());
+    // }
 
     // setelah add code di atas, buat command di terminal: php artisan make:command CancelExpiredReservations
     // lalu isi file Console\Commands\CancelExpiredReservations.php

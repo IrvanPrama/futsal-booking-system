@@ -14,19 +14,17 @@ class CancelExpiredReservations extends Command
     public function handle()
     {
         $now = Carbon::now('Asia/Makassar');
+        $besok = $now->copy()->addDay()->toDateString();
 
-        // Gabungkan tanggal_reservasi + jam_mulai lalu cek <= now + 12 jam
         $count = Reservation::where('status', 'pending')
             ->whereNull('bukti_transfer')
-            ->whereRaw("STR_TO_DATE(CONCAT(tanggal_reservasi, ' ', jam_mulai), '%Y-%m-%d %H:%i:%s') <= ?", [
-                $now->copy()->addHours(12)->toDateTimeString(),
-            ])
+            ->whereDate('tanggal_reservasi', $besok)
             ->update([
                 'status' => 'cancelled',
                 'canceled_at' => $now,
             ]);
 
-        $this->info("Cancelled {$count} expired reservations.");
+        $this->info("Cancelled {$count} pending reservations for {$besok} at {$now->format('H:i')}.");
 
         return 0;
     }

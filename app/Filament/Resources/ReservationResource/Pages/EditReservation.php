@@ -16,7 +16,7 @@ class EditReservation extends EditRecord
     public function mount($record): void
     {
         // Jika bukan role 0, langsung redirect ke /admin
-        if (auth()->user()->role != 0) {
+        if (auth()->user()->role !== 0) {
             Notification::make()
             ->title('Anda tidak memiliki akses ke halaman Hasil.')
             ->danger()

@@ -15,8 +15,10 @@ use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\BulkAction;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Artisan;
 use Maatwebsite\Excel\Facades\Excel;
 
 class ReservationResource extends Resource
@@ -40,7 +42,6 @@ class ReservationResource extends Resource
 
                 Forms\Components\TextInput::make('nama_penyewa')
                    ->label('Penyewa')
-                   ->required()
                    ->required(),
 
                 Forms\Components\Select::make('lapangan_id')
@@ -69,19 +70,33 @@ class ReservationResource extends Resource
                             return [];
                         }
 
-                        $jamBuka = 6;   // contoh jam buka lapangan
-                        $jamTutup = 24; // contoh jam tutup lapangan
+                        $jamBuka = 6;
+                        $jamTutup = 24;
+
+                        $today = Carbon::now();
+                        $tanggalParsed = Carbon::parse($tanggal);
 
                         $reserved = Reservation::where('lapangan_id', $lapanganId)
-                            ->where('tanggal_reservasi', $tanggal)
+                            ->whereDate('tanggal_reservasi', $tanggalParsed->toDateString())
                             ->get();
 
                         $options = [];
+
                         for ($jam = $jamBuka; $jam <= $jamTutup - $durasi; ++$jam) {
                             $jamMulai = sprintf('%02d:00:00', $jam);
                             $jamSelesai = sprintf('%02d:00:00', $jam + $durasi);
 
-                            // cek bentrok dengan reservasi lain
+                            // ❗ BLOKIR JAM YANG SUDAH LEWAT HARI INI
+                            if ($tanggalParsed->isToday()) {
+                                // waktu lengkap
+                                $jamMulaiFull = Carbon::parse($tanggalParsed->toDateString().' '.$jamMulai);
+
+                                if ($jamMulaiFull->lessThanOrEqualTo($today)) {
+                                    continue;
+                                }
+                            }
+
+                            // cek bentrok
                             $bentrok = $reserved->contains(function ($r) use ($jamMulai, $jamSelesai) {
                                 return !(
                                     $jamSelesai <= $r->jam_mulai
@@ -149,7 +164,7 @@ class ReservationResource extends Resource
                         'approved' => 'Approved',
                         'cancelled' => 'Cancelled',
                     ])
-                    ->default('pending')
+                    ->default('Pending')
                     ->required(),
                 Forms\Components\FileUpload::make('bukti_transfer')
                     ->label('Bukti Transfer')
@@ -177,6 +192,28 @@ class ReservationResource extends Resource
                     ]),
                 Tables\Columns\TextColumn::make('bukti_transfer')->label('Bukti Transfer')->url(fn ($record) => $record->bukti_transfer ? asset('storage/'.$record->bukti_transfer) : null)->openUrlInNewTab()->icon('heroicon-o-link')->toggleable(),
             ])
+             ->headerActions([
+                 Action::make('jalankan_update')
+                     ->label('Jalankan Update Sekarang')
+                     ->icon('heroicon-o-arrow-path')
+                     ->color('success')
+                     ->requiresConfirmation()
+                     ->action(function () {
+                         // Jalankan command artisan
+                         Artisan::call('reservations:cancel-expired');
+
+                         // Ambil output command (opsional, bisa ditampilkan)
+                         $output = Artisan::output();
+
+                         // Kirim notifikasi sukses
+                         Notification::make()
+                             ->title('Perintah Dijalankan!')
+                             ->body("Command `reservations:cancel-expired` telah dijalankan.<br><pre>{$output}</pre>")
+                             ->success()
+                             ->send();
+                     })
+                     ->visible(fn () => auth()->user()->role == 0), // hanya admin
+             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
