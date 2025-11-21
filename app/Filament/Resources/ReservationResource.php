@@ -86,7 +86,7 @@ class ReservationResource extends Resource
                             $jamMulai = sprintf('%02d:00:00', $jam);
                             $jamSelesai = sprintf('%02d:00:00', $jam + $durasi);
 
-                            // ❗ BLOKIR JAM YANG SUDAH LEWAT HARI INI
+                            // BLOKIR JAM YANG SUDAH LEWAT HARI INI
                             if ($tanggalParsed->isToday()) {
                                 // waktu lengkap
                                 $jamMulaiFull = Carbon::parse($tanggalParsed->toDateString().' '.$jamMulai);

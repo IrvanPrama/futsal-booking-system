@@ -9,22 +9,45 @@ use Illuminate\Console\Command;
 class CancelExpiredReservations extends Command
 {
     protected $signature = 'reservations:cancel-expired';
-    protected $description = 'Cancel reservations without payment proof 12 hours before start time';
+    protected $description = 'Cancel reservations that are for tomorrow or past dates without payment proof';
 
     public function handle()
     {
         $now = Carbon::now('Asia/Makassar');
-        $besok = $now->copy()->addDay()->toDateString();
+        $today = $now->toDateString();
+        $tomorrow = $now->copy()->addDay()->toDateString();
 
-        $count = Reservation::where('status', 'pending')
+        $count = 0;
+
+        // Ambil semua pending tanpa bukti transfer
+        $reservations = Reservation::where('status', 'pending')
             ->whereNull('bukti_transfer')
-            ->whereDate('tanggal_reservasi', $besok)
-            ->update([
-                'status' => 'cancelled',
-                'canceled_at' => $now,
-            ]);
+            ->get();
 
-        $this->info("Cancelled {$count} pending reservations for {$besok} at {$now->format('H:i')}.");
+        foreach ($reservations as $reservation) {
+            $tanggal = $reservation->tanggal_reservasi;
+            $jamMulai = $reservation->jam_mulai;
+
+            // Waktu reservasi (tanggal + jam mulai)
+            $startTime = Carbon::parse("$tanggal $jamMulai", 'Asia/Makassar');
+
+            // CASE 1: Tanggal sudah lewat
+            $isPastDate = $startTime->lessThan($now);
+
+            // CASE 2: Reservasi tanggal besok
+            $isTomorrow = $tanggal == $tomorrow;
+
+            if ($isPastDate || $isTomorrow) {
+                $reservation->update([
+                    'status' => 'cancelled',
+                    'canceled_at' => $now,
+                ]);
+
+                ++$count;
+            }
+        }
+
+        $this->info("Cancelled {$count} expired reservations at {$now->format('Y-m-d H:i')}.");
 
         return 0;
     }
